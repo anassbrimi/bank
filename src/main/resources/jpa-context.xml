@@ -1,0 +1,89 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.2.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd">
+
+	<!-- Injection automatique des DAO -->
+	<context:component-scan base-package="com.whiteshark.bank.dao" />
+
+	<!-- Injection automatique des services -->
+	<context:component-scan base-package="com.whiteshark.bank.service" />
+
+	<!-- Prise en charge du contexte transactionnel -->
+	<tx:annotation-driven />
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+				<property name="showSql" value="false"></property>
+				<property name="generateDdl" value="true"></property>
+				<property name="databasePlatform" value="org.hibernate.dialect.PostgreSQLDialect"></property>
+			</bean>
+		</property>
+	</bean>
+
+	<!-- Définition des accès à la base de données -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="org.postgresql.Driver"></property>
+		<property name="url" value="jdbc:postgresql://localhost:5432/banque"></property>
+		<property name="username" value="banque"></property>
+		<property name="password" value="banque"></property>
+	</bean>
+
+	<!-- Découverte des annotations persisenceContext pour l'injection automatique 
+		de l'entity manager -->
+	<bean
+		class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+
+	<!-- Définition du gestionnaire de transaction -->
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+	<security:http auto-config="true" use-expressions="true">
+		<security:intercept-url pattern="/css/*"
+			access="permitAll" />
+		<security:intercept-url pattern="/login.html"
+			access="permitAll" />
+		<security:intercept-url pattern="/login_error.html"
+			access="permitAll" />
+		<security:intercept-url pattern="/logout_confirm.html"
+			access="permitAll" />
+		<security:intercept-url pattern="/authentication.html"
+			access="permitAll" />
+
+		<security:intercept-url pattern="/user/*"
+			access="hasRole('ADMINISTRATOR')" />
+		<security:intercept-url pattern="/**"
+			access="isAuthenticated()" />
+
+		<!-- formulaire d'authentification -->
+		<security:form-login login-page="/login.html"
+			default-target-url="/operation/index.html" always-use-default-target="true"
+			authentication-failure-url="/login_error.html" login-processing-url="/authentication.html"
+			username-parameter="username" password-parameter="password" />
+
+		<!-- Page de déconnexion -->
+		<security:logout logout-success-url="/logout_confirm.html"
+			logout-url="/logout.html" delete-cookies="JSESSIONID" />
+	</security:http>
+
+	<!-- Définition de la méthode d'authentification -->
+	<bean id="encoder"
+		class="org.springframework.security.crypto.password.StandardPasswordEncoder" />
+	<security:authentication-manager>
+		<security:authentication-provider
+			user-service-ref="userService">
+			<security:password-encoder ref="encoder" />
+		</security:authentication-provider>
+	</security:authentication-manager>
+</beans>
